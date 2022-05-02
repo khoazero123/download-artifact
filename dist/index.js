@@ -6954,6 +6954,7 @@ var Inputs;
 (function (Inputs) {
     Inputs["Name"] = "name";
     Inputs["Path"] = "path";
+    Inputs["ContinueOnError"] = "continueOnError";
 })(Inputs = exports.Inputs || (exports.Inputs = {}));
 var Outputs;
 (function (Outputs) {
@@ -7009,6 +7010,7 @@ function run() {
         try {
             const name = core.getInput(constants_1.Inputs.Name, { required: false });
             const path = core.getInput(constants_1.Inputs.Path, { required: false });
+            const continueOnError = core.getInput(constants_1.Inputs.ContinueOnError, { required: false });
             let resolvedPath;
             // resolve tilde expansions, path.replace only replaces the first occurrence of a pattern
             if (path.startsWith(`~`)) {
@@ -7030,13 +7032,23 @@ function run() {
                 }
             }
             else {
-                // download a single artifact
-                core.info(`Starting download for ${name}`);
-                const downloadOptions = {
-                    createArtifactFolder: false
-                };
-                const downloadResponse = yield artifactClient.downloadArtifact(name, resolvedPath, downloadOptions);
-                core.info(`Artifact ${downloadResponse.artifactName} was downloaded to ${downloadResponse.downloadPath}`);
+                try {
+                    // download a single artifact
+                    core.info(`Starting download for ${name}`);
+                    const downloadOptions = {
+                        createArtifactFolder: false
+                    };
+                    const downloadResponse = yield artifactClient.downloadArtifact(name, resolvedPath, downloadOptions);
+                    core.info(`Artifact ${downloadResponse.artifactName} was downloaded to ${downloadResponse.downloadPath}`);
+                }
+                catch (err) {
+                    if (continueOnError) {
+                        core.error(err.message);
+                    }
+                    else {
+                        throw err;
+                    }
+                }
             }
             // output the directory that the artifact(s) was/were downloaded to
             // if no path is provided, an empty string resolves to the current working directory

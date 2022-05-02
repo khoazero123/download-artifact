@@ -8,6 +8,7 @@ async function run(): Promise<void> {
   try {
     const name = core.getInput(Inputs.Name, {required: false})
     const path = core.getInput(Inputs.Path, {required: false})
+    const continueOnError = core.getInput(Inputs.ContinueOnError, {required: false})
 
     let resolvedPath
     // resolve tilde expansions, path.replace only replaces the first occurrence of a pattern
@@ -35,19 +36,27 @@ async function run(): Promise<void> {
         )
       }
     } else {
-      // download a single artifact
-      core.info(`Starting download for ${name}`)
-      const downloadOptions = {
-        createArtifactFolder: false
+      try {
+        // download a single artifact
+        core.info(`Starting download for ${name}`)
+        const downloadOptions = {
+          createArtifactFolder: false
+        }
+        const downloadResponse = await artifactClient.downloadArtifact(
+          name,
+          resolvedPath,
+          downloadOptions
+        )
+        core.info(
+          `Artifact ${downloadResponse.artifactName} was downloaded to ${downloadResponse.downloadPath}`
+        )
+      } catch (err) {
+          if (continueOnError) {
+            core.error(err.message)
+          } else {
+            throw err
+          }
       }
-      const downloadResponse = await artifactClient.downloadArtifact(
-        name,
-        resolvedPath,
-        downloadOptions
-      )
-      core.info(
-        `Artifact ${downloadResponse.artifactName} was downloaded to ${downloadResponse.downloadPath}`
-      )
     }
     // output the directory that the artifact(s) was/were downloaded to
     // if no path is provided, an empty string resolves to the current working directory
